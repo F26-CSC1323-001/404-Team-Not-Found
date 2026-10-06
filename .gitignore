@@ -1,0 +1,17 @@
+# Database
+student_info.db
+
+# Face samples
+face_samples/
+
+# Virtual environment
+.venv/
+
+# VS Code settings
+.vscode/
+
+# Python cache
+__pycache__/
+
+face_trainer.yml
+
