@@ -1,0 +1,9 @@
+student_info.db
+
+
+face_samples/
+face_trainer.yml
+
+.venv/
+.vscode/
+__pycache__/
