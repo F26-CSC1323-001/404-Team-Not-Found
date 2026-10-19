@@ -3,7 +3,7 @@ import sqlite3
 
 
 # This function will record attendance for a registered student.
-def mark_attendance(student_id):
+def mark_attendance(student_id, course):
 
     connection = sqlite3.connect("student_info.db")
     cur = connection.cursor()
@@ -19,7 +19,7 @@ def mark_attendance(student_id):
     if student is None:
         print("Student not found!")
         connection.close()
-        return
+        return "not found"
 
     
     now = datetime.now()
@@ -30,28 +30,29 @@ def mark_attendance(student_id):
     # Check whether attendance is already recorded today
     cur.execute("""
         SELECT id FROM attendance
-        WHERE student_id = ? AND date = ?
-    """, (student_id, date))
+        WHERE student_id = ? AND date = ? AND course = ?
+    """, (student_id, date, course))
 
     existing_record = cur.fetchone()
 
     if existing_record is not None:
         print("Attendance already recorded today!")
         connection.close()
-        return
+        return "duplicate"
 
     # Insert attendance record
     cur.execute("""
-        INSERT INTO attendance (student_id, date, time)
-        VALUES (?, ?, ?)
-    """, (student_id, date, time))
+        INSERT INTO attendance (student_id, course, date, time)
+        VALUES (?, ?, ?, ?)
+    """, (student_id, course, date, time))
 
     connection.commit()
     connection.close()
 
     print(f"Attendance recorded for {student[0]} at {time}")
+    return "recorded"
 
 
-# Temporary test
 if __name__ == "__main__":
-    mark_attendance("20008273")
+    result = mark_attendance("20008273", "CSC131")
+    print("Result:", result)

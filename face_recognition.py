@@ -1,5 +1,7 @@
+
 import cv2
 from database import get_student_name
+from attendance import mark_attendance
 
 # Create the LBPH face recognizer
 recognizer = cv2.face.LBPHFaceRecognizer_create()
@@ -14,6 +16,10 @@ face_detector = cv2.CascadeClassifier(
 
 # Open camera
 camera = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+
+# Store attendance information
+recognized_student_id = None
+attendance_message = ""
 
 while True:
 
@@ -42,6 +48,7 @@ while True:
     display_id = "--"
     display_status = "No Face Detected"
     color = (0, 0, 255)
+    recognized_student_id = None
 
     for (x, y, w, h) in faces:
 
@@ -70,6 +77,8 @@ while True:
                 display_id = str(student_id)
                 display_status = "Recognized"
 
+                recognized_student_id = str(student_id)
+
                 # Green
                 color = (0, 255, 0)
 
@@ -97,7 +106,7 @@ while True:
         cv2.rectangle(
             frame,
             (x, y),
-            (x+w, y+h),
+            (x + w, y + h),
             color,
             2
         )
@@ -106,7 +115,7 @@ while True:
         cv2.putText(
             frame,
             text,
-            (x, y-10),
+            (x, y - 10),
             cv2.FONT_HERSHEY_SIMPLEX,
             0.7,
             color,
@@ -158,15 +167,49 @@ while True:
         2
     )
 
+    # Display attendance message
+    cv2.putText(
+        frame,
+        attendance_message,
+        (20, 40),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.7,
+        (0, 255, 255),
+        2
+    )
+
     # Show camera
     cv2.imshow(
         "Face Recognition",
         frame
     )
 
-    # Press q to stop
-    if cv2.waitKey(1) & 0xFF == ord("q"):
+    # Check keyboard input
+    key = cv2.waitKey(1) & 0xFF
+
+    if key == ord("q"):
         break
+
+    elif key == ord("m"):
+
+        if len(faces) != 1:
+            attendance_message = "Please show exactly one face"
+
+        elif recognized_student_id is not None:
+
+            result = mark_attendance(recognized_student_id, "CSC131")
+
+            if result == "recorded":
+                attendance_message = "Attendance Recorded!"
+
+            elif result == "duplicate":
+                attendance_message = "Already Marked Today!"
+
+            else:
+                attendance_message = "Student Not Found!"
+
+        else:
+            attendance_message = "Student Not Recognized!"
 
 # Release camera
 camera.release()
