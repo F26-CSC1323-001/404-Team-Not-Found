@@ -3,6 +3,7 @@ import cv2
 import os
 import sqlite3
 from pathlib import Path
+from database import initialize_database
 
 # Project folder
 BASE_DIR = Path(__file__).resolve().parent
@@ -12,12 +13,14 @@ db_path = BASE_DIR / "student_info.db"
 face_folder.mkdir(exist_ok=True)
 
 # Get student information
-student_id = input("Enter student ID: ").strip()
+student_id = input("Enter student ID (numbers only): ").strip()
 student_name = input("Enter student name: ").strip()
 
-if not student_id or not student_name:
+if not student_id.isdigit() or not student_name:
     print("Student ID and name cannot be empty!")
     raise SystemExit
+
+initialize_database()
 
 # Check whether the student already exists
 connection = sqlite3.connect(db_path)
@@ -32,6 +35,7 @@ existing_student = cursor.fetchone()
 
 if existing_student is not None:
     print(f"Student already registered: {existing_student[0]}")
+    print("Use a new ID for new registrations. Existing samples are not overwritten.")
     connection.close()
     raise SystemExit
 

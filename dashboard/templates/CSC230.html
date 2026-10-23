@@ -1,0 +1,569 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>CSC 230 Attendance System</title>
+
+    <style>
+        /* ---------- GENERAL ---------- */
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f6f8;
+            color: #222;
+            margin: 0;
+            padding: 30px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        /* ---------- HEADER ---------- */
+
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 35px;
+        }
+
+        /* ---------- TOP BUTTONS ---------- */
+
+        .top-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-bottom: 25px;
+        }
+
+        .goback,
+        .theme-toggle {
+            background-color: white;
+            color: black;
+            border: 2px solid black;
+            padding: 10px 18px;
+            cursor: pointer;
+            border-radius: 5px;
+            font-size: 14px;
+            text-decoration: none;
+            display: inline-block;
+            transition: 0.3s;
+        }
+
+        .goback:hover,
+        .theme-toggle:hover {
+            background-color: #008CBA;
+            color: white;
+            border-color: #008CBA;
+        }
+
+        /* ---------- CLASS INFORMATION ---------- */
+
+        .class-info {
+            background-color: white;
+            width: 80%;
+            margin: auto;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+            transition: background-color 0.3s;
+        }
+
+        .class-info h2 {
+            text-align: center;
+        }
+
+        .class-details {
+            display: flex;
+            justify-content: space-around;
+            text-align: center;
+            gap: 20px;
+        }
+
+        /* ---------- MAIN DASHBOARD ---------- */
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 25px;
+            width: 80%;
+            margin: 30px auto;
+        }
+
+        .card {
+            background-color: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+            transition: background-color 0.3s;
+        }
+
+        .card h2 {
+            margin-top: 0;
+        }
+
+        /* ---------- START ATTENDANCE ---------- */
+
+        .attendance-button {
+            background-color: #008CBA;
+            color: white;
+            border: 2px solid #008CBA;
+            padding: 15px 25px;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: 0.3s;
+        }
+
+        .attendance-button:hover {
+            background-color: #006b91;
+            border-color: #006b91;
+            transform: scale(1.05);
+        }
+
+        /* ---------- STATUS ---------- */
+
+        .status {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .ready {
+            color: green;
+            font-weight: bold;
+        }
+
+        .not-ready {
+            color: #cc8800;
+            font-weight: bold;
+        }
+
+        .offline {
+            color: red;
+            font-weight: bold;
+        }
+
+        /* ---------- ATTENDANCE RATE ---------- */
+
+        .rate {
+            font-size: 42px;
+            font-weight: bold;
+            text-align: center;
+            color: #008CBA;
+        }
+
+        /* ---------- ATTENDANCE HISTORY ---------- */
+
+        .history {
+            background-color: white;
+            width: 80%;
+            margin: 30px auto;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+            transition: background-color 0.3s;
+        }
+
+        .history h2 {
+            text-align: center;
+        }
+
+        .table-container {
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            padding: 12px;
+            text-align: center;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #008CBA;
+            color: white;
+        }
+
+        /* ---------- DARK MODE ---------- */
+
+        body.dark-mode {
+            background-color: #121212;
+            color: #f1f1f1;
+        }
+
+        .dark-mode .subtitle {
+            color: #b0b0b0;
+        }
+
+        .dark-mode .class-info,
+        .dark-mode .card,
+        .dark-mode .history {
+            background-color: #1e1e1e;
+            color: #f1f1f1;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+        }
+
+        .dark-mode .status,
+        .dark-mode td {
+            border-bottom-color: #383838;
+        }
+
+        .dark-mode .ready {
+            color: #4ade80;
+        }
+
+        .dark-mode .not-ready {
+            color: #fbbf24;
+        }
+
+        .dark-mode .offline {
+            color: #ff6b6b;
+        }
+
+        .dark-mode .rate {
+            color: #38bdf8;
+        }
+
+        .dark-mode .history p {
+            color: #b0b0b0;
+        }
+
+        .dark-mode .goback,
+        .dark-mode .theme-toggle {
+            background-color: #252525;
+            color: white;
+            border-color: #555;
+        }
+
+        .dark-mode .goback:hover,
+        .dark-mode .theme-toggle:hover {
+            background-color: #008CBA;
+            border-color: #008CBA;
+        }
+
+        /* ---------- RESPONSIVE DESIGN ---------- */
+
+        @media (max-width: 768px) {
+            body {
+                padding: 20px;
+            }
+
+            .class-info,
+            .dashboard,
+            .history {
+                width: 100%;
+            }
+
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+
+            .class-details {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .top-buttons {
+                margin-bottom: 25px;
+            }
+
+            h1 {
+                font-size: 25px;
+                margin-top: 15px;
+            }
+
+            .card,
+            .history {
+                padding: 20px;
+            }
+        }
+
+        @media (max-width: 400px) {
+            .top-buttons {
+                flex-wrap: wrap;
+            }
+
+            .goback,
+            .theme-toggle {
+                padding: 9px 12px;
+            }
+
+            .status {
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- TOP BUTTONS -->
+
+    <div class="top-buttons">
+
+        <button class="theme-toggle" id="themeToggle"
+                type="button">
+            🌙 Dark Mode
+        </button>
+
+
+        <a href="{{ url_for('home') }}" class="goback">
+        BACK
+        </a>
+
+
+    </div>
+
+    <!-- HEADER -->
+
+    <h1>HI! WELCOME TO CSC 230!</h1>
+
+    <p class="subtitle">
+        Smart Facial Recognition Attendance System
+    </p>
+
+    <!-- CLASS INFORMATION -->
+
+    <div class="class-info">
+
+        <h2>Class Information</h2>
+
+        <div class="class-details">
+
+            <div>
+                <strong>Course</strong>
+                <p>CSC 230</p>
+            </div>
+
+            <div>
+
+            </div>
+
+            <div>
+                <strong>Schedule</strong>
+                <p>Monday / Wednesday / Friday</p>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- MAIN DASHBOARD -->
+
+    <div class="dashboard">
+
+        <!-- START ATTENDANCE -->
+
+        <div class="card">
+
+            <h2>Take Attendance</h2>
+
+            <p>
+                Start the attendance process using facial
+                recognition and liveness verification.
+            </p>
+
+            <button class="attendance-button" type="button"
+                    id="startAttendance">
+                Start Attendance
+            </button>
+
+        </div>
+
+        <!-- ATTENDANCE RATE -->
+
+        <div class="card">
+
+            <h2>Attendance Rate</h2>
+
+            <div class="rate">--%</div>
+
+            <p style="text-align: center;">
+                Course attendance rate not available yet
+            </p>
+
+        </div>
+
+        <!-- SYSTEM STATUS -->
+
+        <div class="card">
+
+            <h2>System Status</h2>
+
+            <div class="status">
+                <span>Face Recognition</span>
+                <span class="ready">READY</span>
+            </div>
+
+            <div class="status">
+                <span>Liveness Detection</span>
+                <span class="not-ready">NOT CONFIGURED</span>
+            </div>
+
+            <div class="status">
+                <span>Database</span>
+                <span class="ready">CONNECTED</span>
+            </div>
+
+            <div class="status">
+                <span>GPIO Hardware</span>
+                <span class="offline">OFFLINE</span>
+            </div>
+
+        </div>
+
+        <!-- LAST ATTENDANCE -->
+
+        <div class="card">
+
+            <h2>Last Attendance</h2>
+
+            <p><strong>Student:</strong> <span id="lastStudent">--</span></p>
+
+            <p><strong>Date:</strong> <span id="lastDate">--</span></p>
+
+            <p><strong>Time:</strong> <span id="lastTime">--</span></p>
+
+            <p><strong>Status:</strong> <span id="lastStatus">Waiting for attendance</span></p>
+
+        </div>
+
+    </div>
+
+    <!-- ATTENDANCE HISTORY -->
+
+    <div class="history">
+
+        <h2>Attendance History</h2>
+
+        <div class="table-container">
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Student</th>
+                        <th>Status</th>
+                        <th>Verification</th>
+                    </tr>
+                </thead>
+
+                <tbody id="attendanceTable"><tr><td colspan="4">Loading attendance...</td></tr></tbody>
+            </table>
+
+        </div>
+
+        
+
+    </div>
+
+    <!-- JAVASCRIPT -->
+
+    <script>
+        const themeToggle = document.getElementById("themeToggle");
+
+        // Load the saved theme when the page opens
+        function loadTheme() {
+            const savedTheme = localStorage.getItem("theme");
+
+            if (savedTheme === "dark") {
+                document.body.classList.add("dark-mode");
+            } else {
+                document.body.classList.remove("dark-mode");
+            }
+
+            updateThemeButton();
+        }
+
+        // Update the button text and icon
+        function updateThemeButton() {
+            if (document.body.classList.contains("dark-mode")) {
+                themeToggle.textContent = "Turn On Light Mode";
+            } else {
+                themeToggle.textContent = "Turn On Dark Mode";
+            }
+        }
+
+        // Toggle between dark mode and light mode
+        themeToggle.addEventListener("click", function () {
+            document.body.classList.toggle("dark-mode");
+
+            const currentTheme =
+                document.body.classList.contains("dark-mode")
+                    ? "dark"
+                    : "light";
+
+            localStorage.setItem("theme", currentTheme);
+
+            updateThemeButton();
+        });
+
+        // Initialize the saved theme
+        loadTheme();
+
+        // Attendance button placeholder
+        document.getElementById("startAttendance")
+            .addEventListener("click", function () {
+                alert(
+                    "Attendance system is not connected yet. " +
+                    "Connect your facial recognition system to continue."
+                );
+            });
+
+async function loadAttendance() {
+    const table = document.getElementById("attendanceTable");
+    try {
+        const response = await fetch("/api/attendance/CSC230", {cache: "no-store"});
+        if (!response.ok) throw new Error("API unavailable");
+        const records = await response.json();
+        table.replaceChildren();
+        const latest = records[0];
+        document.getElementById("lastStudent").textContent = latest ? latest[0] : "--";
+        document.getElementById("lastDate").textContent = latest ? latest[1] : "--";
+        document.getElementById("lastTime").textContent = latest ? latest[2] : "--";
+        document.getElementById("lastStatus").textContent = latest ? "Present" : "Waiting for attendance";
+        if (!records.length) {
+            const row = table.insertRow();
+            const cell = row.insertCell();
+            cell.colSpan = 4;
+            cell.textContent = "No attendance records for this course";
+        }
+        for (const record of records) {
+            const row = table.insertRow();
+            for (const value of [record[1], record[0], "Present", "Not recorded"]) {
+                row.insertCell().textContent = value;
+            }
+        }
+    } catch (error) {
+        table.replaceChildren();
+        const row = table.insertRow();
+        const cell = row.insertCell();
+        cell.colSpan = 4;
+        cell.textContent = "Unable to load attendance";
+    }
+}
+loadAttendance();
+setInterval(loadAttendance, 5000);
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Here I Am</title>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        text-align: center;
+        background-color: #f5f5f5;
+        margin: 0;
+        padding: 40px;
+    }
+
+    h1 {
+        color: #333;
+        margin-bottom: 40px;
+    }
+
+    /* Course Buttons */
+    .course-button {
+        background-color: #04AA6D;
+        color: white;
+        padding: 16px 25px;
+        font-size: 16px;
+        border: none;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+        margin: 5px;
+        border-radius: 5px;
+        transition: 0.3s;
+    }
+
+    .course-button:hover {
+        background-color: 3e8e41;
+        transform: scale(1.05);
+    }
+</style>
+</head>
+<body>
+
+    <h1>WELCOME TO OUR ATTENDANCE SYSTEM</h1>
+    <h2> Choose what class you want to check out</h2>
+
+    <!-- Course Buttons-->
+<a href="{{ url_for('csc131') }}" class="course-button">CSC 131</a>
+
+<a href="{{ url_for('csc132') }}" class="course-button">CSC 132</a>
+
+<a href="{{ url_for('csc230') }}" class="course-button">CSC 230</a>
+
+</body>
+</html>

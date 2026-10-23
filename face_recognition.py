@@ -1,13 +1,22 @@
+import argparse
+from pathlib import Path
 
 import cv2
 from database import get_student_name
 from attendance import mark_attendance
+from database import COURSES, initialize_database
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--course", choices=COURSES, required=True)
+args = parser.parse_args()
+initialize_database()
+BASE_DIR = Path(__file__).resolve().parent
 
 # Create the LBPH face recognizer
 recognizer = cv2.face.LBPHFaceRecognizer_create()
 
 # Load the trained face data
-recognizer.read("face_trainer.yml")
+recognizer.read(str(BASE_DIR / "face_trainer.yml"))
 
 # Load the Haar Cascade face detector
 face_detector = cv2.CascadeClassifier(
@@ -15,7 +24,9 @@ face_detector = cv2.CascadeClassifier(
 )
 
 # Open camera
-camera = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+camera = cv2.VideoCapture(0, cv2.CAP_DSHOW if __import__("os").name == "nt" else cv2.CAP_ANY)
+if not camera.isOpened():
+    raise RuntimeError("Camera could not open")
 
 # Store attendance information
 recognized_student_id = None
@@ -197,7 +208,7 @@ while True:
 
         elif recognized_student_id is not None:
 
-            result = mark_attendance(recognized_student_id, "CSC131")
+            result = mark_attendance(recognized_student_id, args.course)
 
             if result == "recorded":
                 attendance_message = "Attendance Recorded!"
