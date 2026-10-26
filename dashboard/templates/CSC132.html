@@ -519,13 +519,20 @@
         // Initialize the saved theme
         loadTheme();
 
-        // Attendance button placeholder
+        // Start the recognition camera for CSC132.
         document.getElementById("startAttendance")
-            .addEventListener("click", function () {
-                alert(
-                    "Attendance system is not connected yet. " +
-                    "Connect your facial recognition system to continue."
-                );
+            .addEventListener("click", async function () {
+                const button = this;
+                button.disabled = true;
+                try {
+                    const response = await fetch("/api/start-attendance/CSC132", { method: "POST" });
+                    const result = await response.json();
+                    alert(result.message || result.error || "Unable to start attendance");
+                } catch (error) {
+                    alert("Cannot connect to the Flask server.");
+                } finally {
+                    button.disabled = false;
+                }
             });
 
 async function loadAttendance() {
@@ -539,7 +546,7 @@ async function loadAttendance() {
         document.getElementById("lastStudent").textContent = latest ? latest[0] : "--";
         document.getElementById("lastDate").textContent = latest ? latest[1] : "--";
         document.getElementById("lastTime").textContent = latest ? latest[2] : "--";
-        document.getElementById("lastStatus").textContent = latest ? "Present" : "Waiting for attendance";
+        document.getElementById("lastStatus").textContent = latest ? latest[3] : "Waiting for attendance";
         if (!records.length) {
             const row = table.insertRow();
             const cell = row.insertCell();
@@ -548,7 +555,7 @@ async function loadAttendance() {
         }
         for (const record of records) {
             const row = table.insertRow();
-            for (const value of [record[1], record[0], "Present", "Not recorded"]) {
+            for (const value of [record[1], record[0], record[3], record[3] === "Absent" ? "No check-in" : "Face recognition"]) {
                 row.insertCell().textContent = value;
             }
         }

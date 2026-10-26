@@ -2,7 +2,7 @@ import sqlite3
 from pathlib import Path
 
 DB_PATH = Path(__file__).resolve().parent / "student_info.db"
-COURSES = ("CSC131", "CSC132", "CSC230")
+COURSES = ("CSC130", "CSC131", "CSC132", "CSC230")
 
 
 def connect():
@@ -28,6 +28,29 @@ def initialize_database():
         columns = {row[1] for row in connection.execute("PRAGMA table_info(attendance)")}
         if "course" not in columns:
             connection.execute("ALTER TABLE attendance ADD COLUMN course TEXT")
+        if "status" not in columns:
+            connection.execute("ALTER TABLE attendance ADD COLUMN status TEXT")
+        connection.execute("""CREATE TABLE IF NOT EXISTS enrollments (
+            student_id TEXT NOT NULL,
+            course TEXT NOT NULL,
+            PRIMARY KEY(student_id, course),
+            FOREIGN KEY(student_id) REFERENCES students(student_id)
+        )""")
+        connection.execute("""CREATE TABLE IF NOT EXISTS class_sessions (
+            course TEXT NOT NULL,
+            date TEXT NOT NULL,
+            PRIMARY KEY(course, date)
+        )""")
+        connection.execute("""CREATE TABLE IF NOT EXISTS course_schedules (
+            course TEXT PRIMARY KEY,
+            start_time TEXT NOT NULL,
+            end_time TEXT NOT NULL,
+            grace_minutes INTEGER NOT NULL,
+            meeting_days TEXT NOT NULL DEFAULT '0,1,2,3,4'
+        )""")
+        connection.execute("""INSERT OR IGNORE INTO course_schedules
+            (course, start_time, end_time, grace_minutes, meeting_days)
+            VALUES ('CSC130', '08:00', '09:00', 15, '0,1,2,3,4')""")
         connection.execute("""CREATE UNIQUE INDEX IF NOT EXISTS attendance_per_course_day
             ON attendance(student_id, course, date)
             WHERE course IS NOT NULL""")

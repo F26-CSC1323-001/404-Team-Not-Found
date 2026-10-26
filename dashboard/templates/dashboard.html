@@ -40,11 +40,14 @@
 </style>
 </head>
 <body>
+<p><a href="/admin">Admin Dashboard</a></p>
 
     <h1>WELCOME TO OUR ATTENDANCE SYSTEM</h1>
     <h2> Choose what class you want to check out</h2>
 
     <!-- Course Buttons-->
+<a href="{{ url_for('csc130') }}" class="course-button">CSC 130</a>
+
 <a href="{{ url_for('csc131') }}" class="course-button">CSC 131</a>
 
 <a href="{{ url_for('csc132') }}" class="course-button">CSC 132</a>

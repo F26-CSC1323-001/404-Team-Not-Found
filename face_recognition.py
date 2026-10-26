@@ -210,12 +210,19 @@ while True:
 
             result = mark_attendance(recognized_student_id, args.course)
 
-            if result == "recorded":
+            if result == "late":
+                attendance_message = "Attendance Recorded: LATE"
+
+            elif result == "recorded":
                 attendance_message = "Attendance Recorded!"
 
             elif result == "duplicate":
                 attendance_message = "Already Marked Today!"
 
+            elif result == "not_enrolled":
+                attendance_message = "Not enrolled in this course"
+            elif result == "outside_window":
+                attendance_message = "Attendance window is closed"
             else:
                 attendance_message = "Student Not Found!"
 
