@@ -12,7 +12,6 @@ import os
 import secrets
 from functools import wraps
 from werkzeug.security import generate_password_hash, check_password_hash
-import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from database import initialize_database, connect, COURSES
 from schedule import get_schedule
@@ -127,6 +126,14 @@ ALLOWED_COURSES = {"CSC130", "CSC131", "CSC132", "CSC230"}
 BASE_DIR = Path(__file__).resolve().parent
 DB_PATH = BASE_DIR.parent / "student_info.db"
 RECOGNITION_SCRIPT = BASE_DIR.parent / "face_recognition.py"
+# Prefer the project's Python 3.12 environment for camera/MediaPipe scripts.
+# This also works if Flask was accidentally started with another Python.
+PROJECT_ROOT = BASE_DIR.parent
+if os.name == "nt":
+    PROJECT_PYTHON = PROJECT_ROOT / ".venv312" / "Scripts" / "python.exe"
+else:
+    PROJECT_PYTHON = PROJECT_ROOT / ".venv312" / "bin" / "python"
+CAMERA_PYTHON = str(PROJECT_PYTHON) if PROJECT_PYTHON.is_file() else sys.executable
 _process_lock = threading.Lock()
 _recognition_process = None
 
@@ -312,7 +319,7 @@ def start_attendance(course):
             return jsonify({"error": "An attendance camera session is already running"}), 409
         try:
             _recognition_process = subprocess.Popen(
-                [sys.executable, str(RECOGNITION_SCRIPT), "--course", course],
+                [CAMERA_PYTHON, str(RECOGNITION_SCRIPT), "--course", course],
                 cwd=str(BASE_DIR.parent),
             )
         except OSError as exc:
@@ -425,7 +432,7 @@ def register_face_save():
         with connect() as conn:
             conn.execute("INSERT INTO students(student_id,name) VALUES (?,?)", (student_id, name))
         # Retrain using the project's existing script; registration succeeds only if training succeeds.
-        result = subprocess.run([sys.executable, str(Path(__file__).resolve().parent.parent / "face_training.py")],
+        result = subprocess.run([CAMERA_PYTHON, str(PROJECT_ROOT / "face_training.py")],
                                 capture_output=True, text=True, timeout=90)
         if result.returncode != 0:
             raise RuntimeError("Training failed: " + result.stderr[-250:])

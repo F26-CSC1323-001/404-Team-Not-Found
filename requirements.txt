@@ -1,4 +1,4 @@
 flask
-opencv-contrib-python
 numpy
+opencv-contrib-python
 mediapipe==0.10.21

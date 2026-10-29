@@ -1,25 +1,10 @@
-# Database
-student_info.db
-
-# Face samples
-face_samples/
-
-# Virtual environment
 .venv/
-
-# VS Code settings
-.vscode/
-
-# Python cache
-__pycache__/
-
-face_trainer.yml
-
 .venv312/
-.venv/
-.flask_secret
-student_info.db
-face_samples/
-face_trainer.yml
 __pycache__/
 *.pyc
+student_info.db
+face_samples/
+face_trainer.yml
+.flask_secret
+.env
+
