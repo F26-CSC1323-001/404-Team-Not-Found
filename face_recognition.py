@@ -1,5 +1,8 @@
 import argparse
 from pathlib import Path
+from auto_attendance_logic import AutoCheckIn
+from liveness_detection import LivenessChallenge, face_signals
+import mediapipe as mp
 
 import cv2
 from database import get_student_name
@@ -31,6 +34,23 @@ if not camera.isOpened():
 # Store attendance information
 recognized_student_id = None
 attendance_message = ""
+auto_checkin = AutoCheckIn(required_frames=12, cooldown_seconds=10)
+liveness = LivenessChallenge()
+mesh = mp.solutions.face_mesh.FaceMesh(static_image_mode=False, max_num_faces=1, refine_landmarks=True)
+verified_id = None
+
+
+def attendance_result_message(result):
+    return {
+        "late": "Attendance Recorded: LATE",
+        "recorded": "Attendance Recorded!",
+        "duplicate": "Already Marked Today!",
+        "not_enrolled": "Not enrolled in this course",
+        "outside_window": "Attendance window is closed",
+        "not_found": "Student Not Found!",
+        "invalid_course": "Invalid course",
+    }.get(result, "Could not record attendance")
+
 
 while True:
 
@@ -133,6 +153,34 @@ while True:
             2
         )
 
+    # Require exactly one recognized face AND a completed movement challenge.
+    candidate = recognized_student_id if len(faces) == 1 else None
+    if candidate is None:
+        liveness.reset()
+        verified_id = None
+        allowed = None
+    else:
+        rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        mesh_result = mesh.process(rgb)
+        if mesh_result.multi_face_landmarks:
+            eye, nose = face_signals(mesh_result.multi_face_landmarks[0])
+            passed = liveness.observe(candidate, eye, nose)
+        else:
+            liveness.reset()
+            passed = False
+        if verified_id != candidate:
+            verified_id = None
+        if passed:
+            verified_id = candidate
+        allowed = candidate if verified_id == candidate else None
+        display_status = liveness.instruction if not passed else "Movement verified"
+
+    stable_id = auto_checkin.observe(allowed)
+    if stable_id is not None:
+        result = mark_attendance(stable_id, args.course)
+        attendance_message = attendance_result_message(result)
+        print(f"Auto check-in {stable_id} ({args.course}): {result}")
+
     # Get camera frame dimensions
     height, width = frame.shape[:2]
 
@@ -202,35 +250,22 @@ while True:
         break
 
     elif key == ord("m"):
-
+        # Manual fallback is restricted to a successfully verified face.
+        # For accessibility failures, use a separate supervised process.
+        if verified_id != recognized_student_id or verified_id is None:
+            attendance_message = "Complete movement challenge first"
+            continue
+        # Operator can confirm an already verified student.
         if len(faces) != 1:
             attendance_message = "Please show exactly one face"
-
         elif recognized_student_id is not None:
-
-            result = mark_attendance(recognized_student_id, args.course)
-
-            if result == "late":
-                attendance_message = "Attendance Recorded: LATE"
-
-            elif result == "recorded":
-                attendance_message = "Attendance Recorded!"
-
-            elif result == "duplicate":
-                attendance_message = "Already Marked Today!"
-
-            elif result == "not_enrolled":
-                attendance_message = "Not enrolled in this course"
-            elif result == "outside_window":
-                attendance_message = "Attendance window is closed"
-            else:
-                attendance_message = "Student Not Found!"
-
+            attendance_message = attendance_result_message(mark_attendance(recognized_student_id, args.course))
         else:
             attendance_message = "Student Not Recognized!"
 
 # Release camera
 camera.release()
+mesh.close()
 
 # Close OpenCV windows
 cv2.destroyAllWindows()

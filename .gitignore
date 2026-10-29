@@ -15,3 +15,11 @@ __pycache__/
 
 face_trainer.yml
 
+.venv312/
+.venv/
+.flask_secret
+student_info.db
+face_samples/
+face_trainer.yml
+__pycache__/
+*.pyc
