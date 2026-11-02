@@ -45,7 +45,7 @@ face_detector = cv2.CascadeClassifier(
     "haarcascade_frontalface_default.xml"
 )
 
-camera = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+camera = cv2.VideoCapture(1, cv2.CAP_DSHOW)
 
 if not camera.isOpened():
     print("Camera could not open!")

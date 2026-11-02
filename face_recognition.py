@@ -27,7 +27,7 @@ face_detector = cv2.CascadeClassifier(
 )
 
 # Open camera
-camera = cv2.VideoCapture(0, cv2.CAP_DSHOW if __import__("os").name == "nt" else cv2.CAP_ANY)
+camera = cv2.VideoCapture(1, cv2.CAP_DSHOW if __import__("os").name == "nt" else cv2.CAP_ANY)
 if not camera.isOpened():
     raise RuntimeError("Camera could not open")
 

@@ -63,7 +63,7 @@ def login():
             session.clear()
             session["admin"] = username
             session["csrf_token"] = secrets.token_hex(24)
-            return redirect(url_for("admin"))
+            return redirect(url_for("home"))
         error = "Invalid username or password"
     return render_template("login.html", error=error)
 
@@ -197,7 +197,12 @@ def reports():
 
 @app.route("/")
 def home():
-    return render_template("dashboard.html")
+    initialize_database()
+    with connect() as conn:
+        students = conn.execute("SELECT student_id, name FROM students ORDER BY name").fetchall()
+        enrollments = conn.execute("SELECT student_id, course FROM enrollments ORDER BY course, student_id").fetchall()
+    return render_template("dashboard.html", courses=COURSES, students=students,
+                           enrollments=enrollments, csrf_token=session["csrf_token"])
 
 
 @app.route("/CSC130")
@@ -444,6 +449,100 @@ def register_face_save():
         return jsonify({"error": str(exc)}), 500
     return jsonify({"message": "Registration and model training complete", "student_id": student_id, "name": name})
 
+
+
+@app.post("/api/students/<student_id>/delete")
+@admin_required
+def delete_student(student_id):
+    """Delete a student and retrain, restoring files/database on failure."""
+    import shutil
+    import tempfile
+    from contextlib import closing
+
+    if request.headers.get("X-CSRF-Token") != session.get("csrf_token"):
+        return jsonify({"error": "Invalid CSRF token"}), 403
+
+    if not student_id.isdigit() or request.get_json(silent=True) != {"confirm": student_id}:
+        return jsonify({"error": "Student ID confirmation required"}), 400
+
+    with _process_lock:
+        if _recognition_process is not None and _recognition_process.poll() is None:
+            return jsonify({"error": "Stop the recognition camera before deleting a student."}), 409
+
+        initialize_database()
+        with connect() as conn:
+            exists = conn.execute(
+                "SELECT 1 FROM students WHERE student_id = ?", (student_id,)
+            ).fetchone()
+        if not exists:
+            return jsonify({"error": "Student not found"}), 404
+
+        samples_dir = PROJECT_ROOT / "face_samples"
+        model = PROJECT_ROOT / "face_trainer.yml"
+
+        try:
+            with tempfile.TemporaryDirectory() as temporary_directory:
+                temporary = Path(temporary_directory)
+                db_backup = temporary / "student_info.db"
+                model_backup = temporary / "face_trainer.yml"
+                moved = []
+
+                # Context managers for sqlite3 connections do NOT close them.
+                # Explicitly close backup connections before Windows deletes temp files.
+                with closing(connect()) as source, closing(sqlite3.connect(db_backup)) as backup:
+                    source.backup(backup)
+
+                if model.exists():
+                    shutil.copy2(model, model_backup)
+
+                try:
+                    if samples_dir.exists():
+                        for sample in samples_dir.glob(f"{student_id}_*.jpg"):
+                            destination = temporary / sample.name
+                            shutil.move(str(sample), str(destination))
+                            moved.append((sample, destination))
+
+                    with connect() as conn:
+                        conn.execute("DELETE FROM attendance WHERE student_id = ?", (student_id,))
+                        conn.execute("DELETE FROM enrollments WHERE student_id = ?", (student_id,))
+                        conn.execute("DELETE FROM students WHERE student_id = ?", (student_id,))
+
+                    remaining = list(samples_dir.glob("*.jpg")) if samples_dir.exists() else []
+                    if remaining:
+                        result = subprocess.run(
+                            [CAMERA_PYTHON, str(PROJECT_ROOT / "face_training.py")],
+                            cwd=str(PROJECT_ROOT),
+                            capture_output=True,
+                            text=True,
+                            timeout=90,
+                        )
+                        if result.returncode != 0:
+                            raise RuntimeError("Retraining failed: " + result.stderr[-500:])
+                    else:
+                        model.unlink(missing_ok=True)
+
+                except Exception as exc:
+                    # Restore the database and face data if deletion/retraining failed.
+                    try:
+                        with closing(sqlite3.connect(db_backup)) as source, closing(connect()) as destination:
+                            source.backup(destination)
+                        for original, staged in moved:
+                            shutil.move(str(staged), str(original))
+                        if model_backup.exists():
+                            shutil.copy2(model_backup, model)
+                        else:
+                            model.unlink(missing_ok=True)
+                    except Exception:
+                        app.logger.exception("Student deletion rollback failed")
+                        return jsonify({"error": "Deletion failed and rollback also failed. Restore from backup before retrying."}), 500
+                    app.logger.exception("Student deletion failed; rollback completed")
+                    return jsonify({"error": f"Deletion cancelled: {exc}"}), 500
+
+        except Exception:
+            app.logger.exception("Student deletion setup or temporary-file cleanup failed")
+            return jsonify({"error": "Student deletion encountered a server/file error. Check the Flask terminal."}), 500
+
+    return jsonify({"message": "Student deleted and recognition model updated."})
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", debug=False)
