@@ -1,0 +1,13 @@
+.venv/
+.venv312/
+__pycache__/
+*.pyc
+student_info.db
+face_samples/
+face_trainer.yml
+.flask_secret
+.env
+
+.env
+.env.*
+!.env.example
