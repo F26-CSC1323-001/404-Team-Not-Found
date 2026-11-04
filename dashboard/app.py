@@ -12,17 +12,41 @@ import os
 import secrets
 from functools import wraps
 from werkzeug.security import generate_password_hash, check_password_hash
+
+# Add project root to Python path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+# Load environment variables from .env
+env_file = Path(__file__).resolve().parent.parent / ".env"
+
+if env_file.exists():
+    for line in env_file.read_text().splitlines():
+        line = line.strip()
+
+        if line and not line.startswith("#") and "=" in line:
+            key, value = line.split("=", 1)
+            os.environ.setdefault(
+                key.strip(),
+                value.strip().strip("'\"")
+            )
+
 from database import initialize_database, connect, COURSES
 from schedule import get_schedule
 
 app = Flask(__name__)
+
 # Stable secret across restarts; do not commit this local file.
 SECRET_FILE = Path(__file__).resolve().parent.parent / ".flask_secret"
+
 if not SECRET_FILE.exists():
     SECRET_FILE.write_text(secrets.token_hex(32), encoding="utf-8")
+
 app.secret_key = SECRET_FILE.read_text(encoding="utf-8").strip()
-app.config.update(SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE="Lax")
+
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax"
+)
 
 
 def admin_required(func):

@@ -1,4 +1,9 @@
 import argparse
+import os
+import socket
+import json
+import threading
+import time
 from pathlib import Path
 from auto_attendance_logic import AutoCheckIn
 from liveness_detection import LivenessChallenge, face_signals
@@ -38,6 +43,41 @@ auto_checkin = AutoCheckIn(required_frames=12, cooldown_seconds=10)
 liveness = LivenessChallenge()
 mesh = mp.solutions.face_mesh.FaceMesh(static_image_mode=False, max_num_faces=1, refine_landmarks=True)
 verified_id = None
+
+# Local-network LED signaling. Keep the shared token out of Git.
+PI_IP = os.environ.get("ATTENDANCE_PI_IP", "192.168.1.202")
+PI_PORT = 5050
+PI_TOKEN = os.environ.get("ATTENDANCE_PI_TOKEN", "")
+last_unknown_signal = 0.0
+
+
+def send_pi_status(status):
+    """Send only a status code; failure must not interrupt recognition."""
+    if not PI_TOKEN:
+        return
+
+    def deliver():
+        try:
+            payload = json.dumps({"token": PI_TOKEN, "status": status}) + "\n"
+            with socket.create_connection((PI_IP, PI_PORT), timeout=0.7) as client:
+                client.settimeout(3)
+                client.sendall(payload.encode("utf-8"))
+                response = client.recv(32).decode("utf-8").strip()
+                if response != "OK":
+                    print("Pi LED response:", response)
+        except OSError as exc:
+            print("Pi LED unavailable:", exc)
+
+    threading.Thread(target=deliver, daemon=True).start()
+
+
+def signal_attendance_result(result):
+    if result in ("recorded", "late"):
+        send_pi_status("SUCCESS")
+    elif result == "duplicate":
+        send_pi_status("ALREADY_MARKED")
+    else:
+        send_pi_status("FAILED")
 
 
 def attendance_result_message(result):
@@ -96,7 +136,7 @@ while True:
         )
 
         # Check if face is recognized
-        if confidence < 70:
+        if confidence < 75:
 
             # Retrieve student name from database
             student_name = get_student_name(student_id)
@@ -153,6 +193,13 @@ while True:
             2
         )
 
+    # Rate-limit unknown-face LED alerts; no alert when no face is present.
+    if len(faces) == 1 and recognized_student_id is None:
+        now = time.monotonic()
+        if now - last_unknown_signal >= 10:
+            send_pi_status("FAILED")
+            last_unknown_signal = now
+
     # Require exactly one recognized face AND a completed movement challenge.
     candidate = recognized_student_id if len(faces) == 1 else None
     if candidate is None:
@@ -178,6 +225,7 @@ while True:
     stable_id = auto_checkin.observe(allowed)
     if stable_id is not None:
         result = mark_attendance(stable_id, args.course)
+        signal_attendance_result(result)
         attendance_message = attendance_result_message(result)
         print(f"Auto check-in {stable_id} ({args.course}): {result}")
 
@@ -259,7 +307,9 @@ while True:
         if len(faces) != 1:
             attendance_message = "Please show exactly one face"
         elif recognized_student_id is not None:
-            attendance_message = attendance_result_message(mark_attendance(recognized_student_id, args.course))
+            result = mark_attendance(recognized_student_id, args.course)
+            signal_attendance_result(result)
+            attendance_message = attendance_result_message(result)
         else:
             attendance_message = "Student Not Recognized!"
 

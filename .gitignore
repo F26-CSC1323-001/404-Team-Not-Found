@@ -8,3 +8,6 @@ face_trainer.yml
 .flask_secret
 .env
 
+.env
+.env.*
+!.env.example
